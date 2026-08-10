@@ -24,4 +24,6 @@ urlpatterns = [
     path('', TemplateView.as_view(template_name='jobs/login.html'), name='home'),
     path('dashboard/', TemplateView.as_view(template_name='jobs/dashboard.html'), name='dashboard'),
     path('register/', TemplateView.as_view(template_name='jobs/register.html'), name='register'),
+    path('reset-password/', TemplateView.as_view(template_name='jobs/reset_password.html'), name='reset_password'),
+
 ]

@@ -7,6 +7,7 @@ urlpatterns = [
     path('auth/register/', views.RegisterView.as_view(), name='register'),
     path('auth/login/', TokenObtainPairView.as_view(), name='login'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('auth/reset-password/', views.reset_password, name='reset_password'),
 
     # Job Applications
     path('applications/', views.JobApplicationListCreateView.as_view(), name='applications'),
@@ -15,7 +16,5 @@ urlpatterns = [
     # Dashboard & Export
     path('dashboard/', views.dashboard_stats, name='dashboard'),
     path('export/', views.export_csv, name='export'),
-    path('auth/reset-password/', views.reset_password, name='reset_password'),
 
-    path('reset-password/', TemplateView.as_view(template_name='jobs/reset_password.html'), name='reset_password'),
 ]
