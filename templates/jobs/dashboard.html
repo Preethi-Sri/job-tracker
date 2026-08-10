@@ -1,0 +1,453 @@
+{% extends 'jobs/base.html' %}
+{% block title %}Dashboard — Job Tracker{% endblock %}
+{% block content %}
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand" href="/dashboard/">
+      <i class="bi bi-briefcase-fill"></i> Job Tracker
+    </a>
+    <div class="d-flex align-items-center gap-3">
+      <span class="nav-username"><i class="bi bi-person-circle"></i> <span id="nav-username"></span></span>
+      <button class="btn-logout" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid px-4 py-4">
+
+  <!-- Top Bar -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="mb-0 fw-bold">My Applications</h4>
+      <p class="text-muted mb-0" style="font-size:13px">Track and manage your job search</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <div class="search-bar">
+        <i class="bi bi-search text-muted"></i>
+        <input type="text" id="search-input" placeholder="Search company or role..." oninput="filterApplications()">
+      </div>
+      <select class="form-select" id="status-filter" onchange="filterApplications()" style="width:150px;border-radius:12px;">
+        <option value="all">All Status</option>
+        <option value="applied">Applied</option>
+        <option value="interview">Interview</option>
+        <option value="offer">Offer</option>
+        <option value="rejected">Rejected</option>
+      </select>
+      <button class="btn btn-success" onclick="exportCSV()"><i class="bi bi-download"></i> Export</button>
+      <button class="btn btn-primary" onclick="openAddModal()"><i class="bi bi-plus-lg"></i> Add Application</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon icon-blue"><i class="bi bi-send-fill"></i></div>
+        <div class="stat-value text-primary" id="stat-total">0</div>
+        <div class="stat-label">Total Applied</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon icon-purple"><i class="bi bi-calendar-check"></i></div>
+        <div class="stat-value" style="color:var(--purple)" id="stat-interview">0</div>
+        <div class="stat-label">Interviews</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon icon-green"><i class="bi bi-trophy-fill"></i></div>
+        <div class="stat-value text-success" id="stat-offer">0</div>
+        <div class="stat-label">Offers</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon icon-red"><i class="bi bi-x-circle-fill"></i></div>
+        <div class="stat-value text-danger" id="stat-rejected">0</div>
+        <div class="stat-label">Rejected</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-8">
+      <div class="chart-card">
+        <h6><i class="bi bi-bar-chart-fill"></i> Applications per Month</h6>
+        <canvas id="monthlyChart" height="100"></canvas>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="chart-card">
+        <h6><i class="bi bi-pie-chart-fill"></i> Status Breakdown</h6>
+        <canvas id="statusChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kanban Board -->
+  <div class="section-title"><i class="bi bi-kanban"></i> Kanban Board</div>
+  <div class="kanban-board mb-4">
+    <div class="kanban-col">
+      <div class="kanban-col-header">
+        <div class="kanban-col-title"><span class="col-dot" style="background:#2E86C1"></span>Applied</div>
+        <span class="col-count" id="count-applied">0</span>
+      </div>
+      <div id="kanban-applied"></div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-header">
+        <div class="kanban-col-title"><span class="col-dot" style="background:#8E44AD"></span>Interview</div>
+        <span class="col-count" id="count-interview">0</span>
+      </div>
+      <div id="kanban-interview"></div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-header">
+        <div class="kanban-col-title"><span class="col-dot" style="background:#27AE60"></span>Offer</div>
+        <span class="col-count" id="count-offer">0</span>
+      </div>
+      <div id="kanban-offer"></div>
+    </div>
+    <div class="kanban-col">
+      <div class="kanban-col-header">
+        <div class="kanban-col-title"><span class="col-dot" style="background:#E74C3C"></span>Rejected</div>
+        <span class="col-count" id="count-rejected">0</span>
+      </div>
+      <div id="kanban-rejected"></div>
+    </div>
+  </div>
+
+  <!-- Applications Table -->
+  <div class="section-title"><i class="bi bi-table"></i> All Applications</div>
+  <div class="table-card">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Company</th>
+          <th>Role</th>
+          <th>Location</th>
+          <th>Type</th>
+          <th>Applied Date</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="applications-table"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="appModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-title"><i class="bi bi-plus-circle"></i> Add Application</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-id">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Company *</label>
+            <input type="text" id="company" class="form-control" placeholder="e.g. SAP SE">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Role *</label>
+            <input type="text" id="role" class="form-control" placeholder="e.g. Python Developer">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Location</label>
+            <input type="text" id="location" class="form-control" placeholder="e.g. Munich, Germany">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Job Type</label>
+            <select id="job_type" class="form-select">
+              <option value="full-time">Full-time</option>
+              <option value="part-time">Part-time</option>
+              <option value="contract">Contract</option>
+              <option value="internship">Internship</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Status</label>
+            <select id="status" class="form-select">
+              <option value="applied">Applied</option>
+              <option value="interview">Interview</option>
+              <option value="offer">Offer</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Applied Date *</label>
+            <input type="date" id="applied_date" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Salary</label>
+            <input type="text" id="salary" class="form-control" placeholder="e.g. €50,000">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Interview Date</label>
+            <input type="date" id="interview_date" class="form-control">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold">Job URL</label>
+            <input type="url" id="job_url" class="form-control" placeholder="https://...">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold">Notes</label>
+            <textarea id="notes" class="form-control" rows="3" placeholder="Any notes about this application..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="saveApplication()"><i class="bi bi-check-lg"></i> Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const token = localStorage.getItem('access_token');
+if (!token) window.location.href = '/';
+
+document.getElementById('nav-username').textContent = localStorage.getItem('username') || '';
+
+let allApplications = [];
+let monthlyChart, statusChart;
+
+function getHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+  };
+}
+const headers = getHeaders();
+
+// ── Load Dashboard ──
+async function loadDashboard() {
+  const res = await fetch('/api/dashboard/', { headers });
+  if (res.status === 401) { logout(); return; }
+  const data = await res.json();
+
+  document.getElementById('stat-total').textContent = data.total;
+  document.getElementById('stat-interview').textContent = data.interview;
+  document.getElementById('stat-offer').textContent = data.offer;
+  document.getElementById('stat-rejected').textContent = data.rejected;
+
+  renderMonthlyChart(data.monthly);
+  renderStatusChart(data.by_status);
+}
+
+// ── Load Applications ──
+async function loadApplications() {
+  const res = await fetch('/api/applications/', { headers });
+  allApplications = await res.json();
+  renderAll(allApplications);
+}
+
+function renderAll(apps) {
+  renderKanban(apps);
+  renderTable(apps);
+}
+
+// ── Kanban ──
+function renderKanban(apps) {
+  ['applied','interview','offer','rejected'].forEach(s => {
+    document.getElementById(`kanban-${s}`).innerHTML = '';
+    document.getElementById(`count-${s}`).textContent = 0;
+  });
+
+  apps.forEach(app => {
+    const col = document.getElementById(`kanban-${app.status}`);
+    if (!col) return;
+    document.getElementById(`count-${app.status}`).textContent =
+      parseInt(document.getElementById(`count-${app.status}`).textContent) + 1;
+
+    col.innerHTML += `
+      <div class="job-card" onclick="openEditModal(${app.id})">
+        <div class="company">${app.company}</div>
+        <div class="role">${app.role}</div>
+        <div class="card-tags">
+          <span class="tag tag-blue">${app.job_type}</span>
+          ${app.location ? `<span class="tag tag-gray">${app.location}</span>` : ''}
+        </div>
+        <div class="card-date"><i class="bi bi-calendar3"></i> ${app.applied_date}</div>
+      </div>`;
+  });
+}
+
+// ── Table ──
+function renderTable(apps) {
+  const tbody = document.getElementById('applications-table');
+  if (apps.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No applications found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = apps.map(app => `
+    <tr>
+      <td><strong>${app.company}</strong></td>
+      <td>${app.role}</td>
+      <td>${app.location || '—'}</td>
+      <td>${app.job_type}</td>
+      <td>${app.applied_date}</td>
+      <td><span class="status-badge badge-${app.status}">${app.status.charAt(0).toUpperCase() + app.status.slice(1)}</span></td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal(${app.id})"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteApplication(${app.id})"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+// ── Charts ──
+function renderMonthlyChart(monthly) {
+  if (monthlyChart) monthlyChart.destroy();
+  monthlyChart = new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+      labels: monthly.map(m => m.month),
+      datasets: [{
+        label: 'Applications',
+        data: monthly.map(m => m.count),
+        backgroundColor: 'rgba(26,82,118,0.8)',
+        borderColor: '#1A5276',
+        borderWidth: 2,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+  });
+}
+
+function renderStatusChart(byStatus) {
+  if (statusChart) statusChart.destroy();
+  const colors = { applied:'#2E86C1', interview:'#8E44AD', offer:'#27AE60', rejected:'#E74C3C' };
+  statusChart = new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: byStatus.map(s => s.status),
+      datasets: [{
+        data: byStatus.map(s => s.count),
+        backgroundColor: byStatus.map(s => colors[s.status] || '#ccc'),
+        borderWidth: 0
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+  });
+}
+
+// ── Filter ──
+function filterApplications() {
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const status = document.getElementById('status-filter').value;
+  const filtered = allApplications.filter(app => {
+    const matchSearch = app.company.toLowerCase().includes(search) || app.role.toLowerCase().includes(search);
+    const matchStatus = status === 'all' || app.status === status;
+    return matchSearch && matchStatus;
+  });
+  renderAll(filtered);
+}
+
+// ── Add Modal ──
+function openAddModal() {
+  document.getElementById('modal-title').innerHTML = '<i class="bi bi-plus-circle"></i> Add Application';
+  document.getElementById('edit-id').value = '';
+  ['company','role','location','salary','job_url','notes'].forEach(f => document.getElementById(f).value = '');
+  document.getElementById('job_type').value = 'full-time';
+  document.getElementById('status').value = 'applied';
+  document.getElementById('applied_date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('interview_date').value = '';
+  new bootstrap.Modal(document.getElementById('appModal')).show();
+}
+
+// ── Edit Modal ──
+async function openEditModal(id) {
+  const app = allApplications.find(a => a.id === id);
+  if (!app) return;
+  document.getElementById('modal-title').innerHTML = '<i class="bi bi-pencil"></i> Edit Application';
+  document.getElementById('edit-id').value = app.id;
+  document.getElementById('company').value = app.company;
+  document.getElementById('role').value = app.role;
+  document.getElementById('location').value = app.location || '';
+  document.getElementById('job_type').value = app.job_type;
+  document.getElementById('status').value = app.status;
+  document.getElementById('applied_date').value = app.applied_date;
+  document.getElementById('salary').value = app.salary || '';
+  document.getElementById('interview_date').value = app.interview_date || '';
+  document.getElementById('job_url').value = app.job_url || '';
+  document.getElementById('notes').value = app.notes || '';
+  new bootstrap.Modal(document.getElementById('appModal')).show();
+}
+
+// ── Save ──
+async function saveApplication() {
+  const id = document.getElementById('edit-id').value;
+  const interviewDate = document.getElementById('interview_date').value;
+  const jobUrl = document.getElementById('job_url').value;
+
+  const body = {
+    company: document.getElementById('company').value,
+    role: document.getElementById('role').value,
+    location: document.getElementById('location').value || '',
+    job_type: document.getElementById('job_type').value,
+    status: document.getElementById('status').value,
+    applied_date: document.getElementById('applied_date').value,
+    salary: document.getElementById('salary').value || '',
+    notes: document.getElementById('notes').value || '',
+  };
+
+  if (interviewDate) body.interview_date = interviewDate;
+  if (jobUrl) body.job_url = jobUrl;
+
+  const url = id ? `/api/applications/${id}/` : '/api/applications/';
+  const method = id ? 'PUT' : 'POST';
+
+  const res = await fetch(url, { method, headers, body: JSON.stringify(body) });
+  if (res.ok) {
+    bootstrap.Modal.getInstance(document.getElementById('appModal')).hide();
+    loadDashboard();
+    loadApplications();
+  }
+}
+
+// ── Delete ──
+async function deleteApplication(id) {
+  if (!confirm('Delete this application?')) return;
+  await fetch(`/api/applications/${id}/`, { method: 'DELETE', headers });
+  loadDashboard();
+  loadApplications();
+}
+
+// ── Export ──
+async function exportCSV() {
+  const res = await fetch('/api/export/', { headers });
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'job_applications.csv';
+  a.click();
+}
+
+// ── Logout ──
+function logout() {
+  localStorage.clear();
+  window.location.href = '/';
+}
+
+loadDashboard();
+loadApplications();
+</script>
+{% endblock %}
