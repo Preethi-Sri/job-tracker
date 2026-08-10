@@ -15,4 +15,7 @@ urlpatterns = [
     # Dashboard & Export
     path('dashboard/', views.dashboard_stats, name='dashboard'),
     path('export/', views.export_csv, name='export'),
+    path('auth/reset-password/', views.reset_password, name='reset_password'),
+
+    path('reset-password/', TemplateView.as_view(template_name='jobs/reset_password.html'), name='reset_password'),
 ]

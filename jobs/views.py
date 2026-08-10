@@ -99,3 +99,19 @@ def export_csv(request):
         ])
 
     return response
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request):
+    username = request.data.get('username')
+    new_password = request.data.get('new_password')
+
+    if not username or not new_password:
+        return Response({'error': 'Username and new password are required'}, status=400)
+
+    try:
+        user = User.objects.get(username=username)
+        user.set_password(new_password)
+        user.save()
+        return Response({'message': 'Password reset successful!'}, status=200)
+    except User.DoesNotExist:
+        return Response({'error': 'Username not found!'}, status=404)

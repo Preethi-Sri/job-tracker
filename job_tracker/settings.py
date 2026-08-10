@@ -20,7 +20,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-kg$p9@i*4x5-#330y^89*ya0g2c5=t6%r5v#ljp3j41&6i#@uk'
+
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-kg$p9@i*4x5-#330y^89*ya0g2c5=t6%r5v#ljp3j41&6i#@uk')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
