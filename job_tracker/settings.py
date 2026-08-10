@@ -80,15 +80,13 @@ WSGI_APPLICATION = 'job_tracker.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+import os
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'job_tracker',
-        'USER': 'postgres',
-        'PASSWORD': 'Sriram@123',  # ← your PostgreSQL password here
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL', 'postgresql://postgres:Sriram@123@localhost:5432/job_tracker')
+    )
 }
 
 
